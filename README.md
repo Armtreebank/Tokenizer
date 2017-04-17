@@ -1,5 +1,5 @@
 # [ՀայՇտեմ](http://armtreebank.yerevann.com/)
-###Tokenization and Word segmentation
+### Tokenization and Word segmentation
 #### Tokenizer
 
 Լեզվաբանական առումով այստեղ հիմնվելու ենք «բառի» (սահմանների, առանձնացման, նույնականացման) շուրջ 1950-60-ականների բանավեճի և արդյունքում «բառի» ֆորմալ սահմանման ավանդույթի վրա, որն ընկած է tokenization-ի ժամանակակից ընկալումների հիմքում։
