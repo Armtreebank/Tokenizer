@@ -1,7 +1,45 @@
-import re
+import os
 
-class Punct:
+import re
+from xml.dom import minidom
+
+class Dictionary:
+  PATH = os.path.dirname(__file__) + '/dictionaries'
   
+  def __init__(self, name):
+    if not name:
+      raise KeyError('Please write dictionary name')
+    
+    fullpath = '{path}/{name}'.format(path=self.PATH, name=name)
+    try:
+      xml = minidom.parse(fullpath)
+    except FileNotFoundError as E:
+      return
+      
+    self.xml = xml
+    self.name = name
+    
+  def get_word(self, sentence):
+    if not hasattr(self, 'xml'):
+      raise Exception('Dictionary is not initialized')
+      
+    itemlist = self.xml.getElementsByTagName('unit')
+    for unit in itemlist:
+      text_elem = unit.getElementsByTagName('p')[0]
+      text = text_elem.childNodes[0].nodeValue
+      match = re.match(text, sentence)
+      if match:
+        return {
+          'word': text,
+          'exist': True,
+        }
+    
+    return {
+      'word': '',
+      'exist': False,
+    }
+      
+class Punct:
   LINEAR_PUNCTUATION = {
     '0l': ('՚','\u055A',''),
     '1l': ('՛','\u055B',''),
@@ -14,7 +52,7 @@ class Punct:
     ':': ('։','\u0589',':'),
     4: ('\.\.\.\.','',''),
     3: ('\.\.\.','',''),
-    'dot': ('.','\u002E','\.'),
+    'dot': ('\.','\u002E','\.'),
     'comma': (',','\u002C',','),
     '`': ('՝','\u055D','`'),
     0: ('֊','\u058A',''),
@@ -79,31 +117,33 @@ class Punct:
       return u'|'.join(cls.METRIC)
 
 class Tokenizer:
-  
   SEGMENTATION_RULES = [
-    (1, u'([' + Punct([':', 3, 4]).regex() + ']\s*[Ա-ՖևA-ZА-ЯЁ]+)'), #: Ա
-    (2, u'([' + Punct([':', 3, 4]).regex() + ']\s*$)'), #:
-    (3, u'([' + Punct(':').regex() + ']\s+[0-9]{1})'), #: 2016
+    (1, u'(' + Punct(':').regex() + ')\s*[Ա-ՖևA-ZА-ЯЁ]+', 1), #: Ա
+    (12, u'(' + Punct(4).regex() + ')\s*[Ա-ՖևA-ZА-ЯЁ]+', 4), #.... Ա
+    (13, u'(' + Punct(3).regex() + ')\s*[Ա-ՖևA-ZА-ЯЁ]+', 3), #... Ա
+    (2, u'(' + Punct(':').regex() + ')\s*$', 1), #:
+    (22, u'(' + Punct(4).regex() + ')\s*$', 4), #....
+    (23, u'(' + Punct(3).regex() + ')\s*$', 3), #...
+    (3, u'[' + Punct(':').regex() + ']\s+[0-9]{1}', 1), #: 2016
     #(4, u'([' + Punct.all() + ']\s*[' + Punct([5, 6]).regex() + ']+\s*[Ա-ֆևևA-zА-яЁё0-9]+)'), #, -
-    (5, u'([' + Punct.all() + ']\s*[' + Punct(1).regex() + ']{1}\s*[Ա-ֆևևA-zА-яЁё0-9]+)'), #. <<
-    (6, u'\.{1}\n'),
-    (6, u'\S{1}\n'),
+    (5, u'[' + Punct.all() + ']\s*[' + Punct(1).regex() + ']{1}\s*[Ա-ֆևևA-zА-яЁё0-9]+', 1), #. <<
+    (6, u'\.{1}\n', 1),
   ]
   
   TOKENIZATION_RULES = [
     (1, u'[' + Punct.inter() + ']'), # 5°С, $5, -5, +5
     (2, Punct.metric(double=True)), # 5կմ/ժ, 5մ/վ
     (3, u'[0-9]+-[ա-ֆԱ-Ֆևև]+'), #1-ին , 5-ական
-    (4, u'թ[ա-ֆև]*\.*-[ա-ֆԱ-Ֆևև]+'), #1999թ.-ին
-    (19, u'թթ.-ին|թ.-ին'),
-    (5, u'[0-9]+\s+[0-9]+'), #numbers 250 000
+    #(4, u'թ[ա-ֆև]*\.*-[ա-ֆԱ-Ֆևև]+'), #1999թ.-ին
+    #(19, u'թթ.-ին|թ.-ին'),
+    #(5, u'[0-9]+\s+[0-9]+'), #numbers 250 000
     (6, u'[0-9]+[\.|,|/]{1}[0-9]+'), #numbers 2.5 2,5 2/3
     (7, u'\.[0-9]+'), #numbers .5 , .08
     (7.1, u'[0-9]+'), #numbers 25
     (8, u'([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)'), #E-mail
     (9, u'@[a-z0-9_-]{3,}'), #nickname @gor_ar
     (10, u'[Ա-Ֆև]+[ա-ֆև]+-[Ա-Ֆև]+[ա-ֆև]+'), #Սայաթ-Նովա
-    (11, u'[Ա-Ֆև]+-[ա-ֆև]+'), #ՀՀԿ-ական ( լավ չի, բայց ուրիշ օրինակ մտքիս չեկավ )
+    (11, u'[Ա-Ֆևа-яА-ЯЁёA-z]+-[ա-ֆև]+'), #ՀՀԿ-ական ( լավ չի, բայց ուրիշ օրինակ մտքիս չեկավ )
     (12, u'(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?'), #URL
     (20, u'[ա-ֆԱ-Ֆևև]+[' + Punct.all(linear=True) + ']{1,3}'), #հեյ~(հե~յ)
     (13, u'[ա-ֆԱ-Ֆևև]+'), #simple word
@@ -116,7 +156,7 @@ class Tokenizer:
   
   SPECIAL_RULES = {
     'segment': [
-      ( '__all__', False, u'[' + Punct(1).regex() + ']\s*[ա-ֆևa-zа-яё]{1}[A-zА-яЁёԱ-ֆևև\s։]+[^' + Punct(2).regex() + ']$' ), #<<bla bla: bla>> is not a segment
+      ( '__all__', False, u'[' + Punct(1).regex() + ']\s*[Ա-ՖևA-ZА-ЯЁ]{1}[A-zА-яЁёԱ-ֆևև\s։]+[^' + Punct(2).regex() + ']$' ), #<<bla bla: bla>> is not a segment
       #( [4], False, u'[0-9]{1}թ$' ), #1999թ.-ին is not a segment
     ],
     'token': [
@@ -163,13 +203,13 @@ class Tokenizer:
   
   @classmethod
   def is_segment(cls, text, pointer):
-    for index, r in cls.SEGMENTATION_RULES:
+    for index, r, len in cls.SEGMENTATION_RULES:
       if re.match(r, text[pointer:]):
         for s_r in cls.SPECIAL_RULES['segment']:
           if (isinstance(s_r[0], list) and index in s_r[0] ) or s_r[0] == '__all__':
             if not (( re.findall(s_r[2], text[:pointer]) and s_r[1] ) or ( not re.findall(s_r[2], text[:pointer]) and not s_r[1] )):
               return False
-        return True
+        return [r, len]
     return False
 
   @classmethod
@@ -209,11 +249,13 @@ class Tokenizer:
   def segmentation(self):
     self.purification()
     checkpoint = 0
+    l = 0
     
-    for l in range(self.text_length):
-      if self.is_segment(self.text[checkpoint:], l-checkpoint):
-        
-        new_segment = self.text[checkpoint:l+1]
+    while(l < self.text_length):
+      seg = self.is_segment(self.text[checkpoint:], l-checkpoint)
+      if seg:
+        punct_len = seg[-1]
+        new_segment = self.text[checkpoint:(l + punct_len)]
         clean_segment = new_segment.rstrip().lstrip()
         self.segments.append({
           'segment': clean_segment,
@@ -221,34 +263,49 @@ class Tokenizer:
           'tokens': []
         })
         
-        checkpoint = l + 1
-        
+        checkpoint = l + punct_len
+        l += punct_len
+      else:
+        l += 1
     return self
 
   def tokenization(self):
+    AbbreviationsDictionary = Dictionary('abbreviations.xml')
     for s in self.segments:
       l = 0
       index = 1
       
       while l < len(s['segment']):
-        token = self.find_token(s['segment'], l)
-        if token:
-          l += token.end()
-          new_token = token.group(0)
-          clean_token = new_token.rstrip().lstrip()
-          
-          multi = self.multitoken(clean_token)
-          if multi:
-            start_p = index
-            end_p = start_p + len(multi) - 1
-            s['tokens'].append( ('{s}-{e}'.format(s=start_p, e=end_p), clean_token) )
-            for t in multi:
-              s['tokens'].append( (index, t) )
+        #Try to find the word in abbreviations dictionary
+        dict_word = ''
+        try:
+          dict = AbbreviationsDictionary
+          dict_word = dict.get_word(s['segment'][l:])
+        except Exception:
+          pass
+        if 'exist' in dict_word and dict_word['exist'] == True:
+          s['tokens'].append(( index, dict_word['word']))
+          index += 1
+          l += len(dict_word['word'])
+        else:
+          #Try to find a static rule
+          token = self.find_token(s['segment'], l)
+          if token:
+            l += token.end()
+            new_token = token.group(0)
+            clean_token = new_token.rstrip().lstrip()
+            
+            multi = self.multitoken(clean_token)
+            if multi:
+              start_p = index
+              end_p = start_p + len(multi) - 1
+              s['tokens'].append( ('{s}-{e}'.format(s=start_p, e=end_p), clean_token) )
+              for t in multi:
+                s['tokens'].append( (index, t) )
+                index += 1
+            else:
+              s['tokens'].append(( index, clean_token ))
               index += 1
           else:
-            s['tokens'].append(( index, clean_token ))
-            index += 1
-            
-        else:
-          l += 1
+            l += 1
     return self
