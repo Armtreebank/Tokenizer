@@ -54,3 +54,19 @@
 
  -  Եթե չակերտներում մեջբերվում է անվանում (գեղարվեստական կամ գիտական երկերի վերնագրեր, թերթերի անուններ և այլն), որում առկա են տերմինալ նշաններ, ապա անվանման ներսում սահմաններ չեն դրվում։
 Օր.՝ Խաչատուր Աբովյանի «Վերք Հայաստանի։ Ողբ հայրենասեր»-ի վեպը հրատարակվել է 1858թ.։|
+
+## Usage
+```python
+#import Tokenizer
+from tokenizer import Tokenizer
+
+#write some text
+text = 'Ես սիրում եմ python:'
+
+#tokenization
+T = Tokenizer(text)
+T.segmentation().tokenization()
+
+#print result
+print(T)
+```
