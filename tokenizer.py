@@ -1,10 +1,8 @@
-import os
-
 import re
 from xml.dom import minidom
 
 class Dictionary:
-  PATH = os.path.dirname(__file__) + '/dictionaries'
+  PATH = '/dictionaries'
   
   def __init__(self, name):
     if not name:
